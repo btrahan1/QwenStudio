@@ -192,7 +192,8 @@ public sealed class NativeAgentEngine : IDisposable
 
                             // P0 Proactive Write Eviction: Once written to disk, disk is ground truth.
                             // Compact raw file contents in the in-memory assistant message so KV cache doesn't bloat.
-                            if (result.Success && (tc.Name == "write_file" || tc.Name == "edit_file"))
+                            // Note: NEVER compact edit_file (new_string must stay verbatim so the model remembers the snippet).
+                            if (result.Success && tc.Name == "write_file")
                             {
                                 CompactToolCallArguments(assistantMsg, tc.Id);
                             }
@@ -900,16 +901,10 @@ public sealed class NativeAgentEngine : IDisposable
                     if (node is JsonObject obj)
                     {
                         bool modified = false;
-                        if (obj["content"] != null && obj["content"]!.GetValue<string>().Length > 300)
+                        if (obj["content"] != null && obj["content"]!.GetValue<string>().Length > 500)
                         {
                             var filePath = obj["file_path"]?.GetValue<string>() ?? "file";
                             obj["content"] = $"[Content written to disk ({Path.GetFileName(filePath)}). Ground truth remains on disk.]";
-                            modified = true;
-                        }
-                        if (obj["new_string"] != null && obj["new_string"]!.GetValue<string>().Length > 300)
-                        {
-                            var filePath = obj["file_path"]?.GetValue<string>() ?? "file";
-                            obj["new_string"] = $"[Edit applied to disk ({Path.GetFileName(filePath)}). Ground truth remains on disk.]";
                             modified = true;
                         }
 
