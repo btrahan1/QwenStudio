@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QwenStudio</title>
+  <style>
+    :root {
+      --bg-root: #0d0f14;
+      --bg-panel: #13161f;
+      --bg-elevated: #1a1e2b;
+      --bg-hover: #232838;
+      --border: #262b3d;
+      --text: #e4e7f0;
+      --text-muted: #8b92a8;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --cyan: #06b6d4;
+      --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-root);
+      color: var(--text);
+      font-family: var(--font-sans);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* ---------- Top Bar ---------- */
+    .topbar {
+      height: 46px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 5px;
+      letter-spacing: 0.04em;
+    }
+
+    .workspace-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      max-width: 460px;
+    }
+
+    .workspace-path {
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 300px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .telemetry-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+
+    .dot.online {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .dot.busy {
+      background: var(--amber);
+      box-shadow: 0 0 10px var(--amber);
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.45; }
+      to { opacity: 1; }
+    }
+
+    select, input, textarea {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-family: inherit;
+      font-size: 12.5px;
+      outline: none;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.12s, border-color 0.12s;
+    }
+
+    .btn:hover {
+      background: var(--bg-hover);
+      border-color: #38405a;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.28);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .msg.sys-notice {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px dashed var(--accent);
+      border-radius: 8px;
+      padding: 9px 13px;
+      font-size: 12.5px;
+      color: #c7d2fe;
+      line-height: 1.45;
+    }
+
+    /* ---------- Main 3-Column Workbench ---------- */
+    .workbench {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 260px 1fr 430px;
+      overflow: hidden;
+    }
+
+    /* ---------- Left Sidebar (Files + Chats) ---------- */
+    .sidebar {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-tab {
+      flex: 1;
+      text-align: center;
+      padding: 9px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .sidebar-tab.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+      background: rgba(99, 102, 241, 0.06);
+    }
+
+    .sidebar-pane {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: none;
+    }
+
+    .sidebar-pane.active {
+      display: block;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 12.5px;
+      cursor: pointer;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tree-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .tree-item.active {
+      background: rgba(99, 102, 241, 0.18);
+      color: #fff;
+    }
+
+    .tree-item .icon {
+      font-size: 13px;
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .session-card {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .session-card:hover {
+      border-color: var(--accent);
+    }
+
+    .session-card.active {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.14);
+    }
+
+    .session-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+      padding-right: 20px;
+    }
+
+    .session-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .session-del {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    .session-del:hover {
+      color: var(--red);
+      background: rgba(239, 68, 68, 0.12);
+    }
+
+    /* ---------- Center Column (Editor + Console) ---------- */
+    .center-col {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-root);
+    }
+
+    .editor-header {
+      height: 36px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      gap: 8px;
+    }
+
+    .editor-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+      height: 100%;
+    }
+
+    .editor-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 11px;
+      height: 28px;
+      border-radius: 5px;
+      font-size: 12px;
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .editor-tab.active {
+      color: #fff;
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.14);
+    }
+
+    .editor-tab .close-tab {
+      font-size: 11px;
+      opacity: 0.6;
+    }
+
+    .editor-tab .close-tab:hover {
+      opacity: 1;
+      color: var(--red);
+    }
+
+    .editor-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #monacoHost {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    #fallbackEditor {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #0d0f14;
+      color: #e4e7f0;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.55;
+      padding: 14px;
+      border: none;
+      resize: none;
+      display: none;
+      user-select: text;
+    }
+
+    /* ---------- Bottom Tabbed Console ("Show Me Da Money") ---------- */
+    .console-panel {
+      height: 230px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .console-header {
+      height: 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+
+    .console-tabs {
+      display: flex;
+      gap: 14px;
+      height: 100%;
+    }
+
+    .console-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      height: 100%;
+    }
+
+    .console-tab.active {
+      color: var(--cyan);
+      border-bottom-color: var(--cyan);
+    }
+
+    .console-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.45;
+      user-select: text;
+      display: none;
+    }
+
+    .console-body.active {
+      display: block;
+    }
+
+    .log-line {
+      margin-bottom: 3px;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .log-line.think { color: #a78bfa; }
+    .log-line.tool { color: #38bdf8; }
+    .log-line.err { color: #f87171; }
+    .log-line.sys { color: #34d399; }
+
+    /* ---------- Right Column (Antigravity Agent Chat) ---------- */
+    .chat-col {
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      height: 36px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .chat-stream {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      user-select: text;
+    }
+
+    .msg {
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px solid var(--border);
+      word-wrap: break-word;
+    }
+
+    .msg.user {
+      background: rgba(99, 102, 241, 0.14);
+      border-color: rgba(99, 102, 241, 0.35);
+      align-self: flex-end;
+      width: 92%;
+    }
+
+    .msg.assistant {
+      background: var(--bg-elevated);
+      width: 100%;
+    }
+
+    .msg-role {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .thinking-box {
+      background: rgba(168, 85, 247, 0.08);
+      border-left: 3px solid #a855f7;
+      border-radius: 4px;
+      padding: 7px 10px;
+      margin-bottom: 8px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #c4b5fd;
+      white-space: pre-wrap;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .thinking-header {
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      margin-bottom: 4px;
+    }
+
+    .tool-pill {
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: 6px;
+      padding: 6px 9px;
+      margin: 6px 0;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #67e8f9;
+      cursor: pointer;
+    }
+
+    .tool-pill:hover {
+      border-color: var(--cyan);
+      background: rgba(6, 182, 212, 0.16);
+    }
+
+    .assistant-text {
+      white-space: pre-wrap;
+      font-size: 13px;
+    }
+
+    .chat-input-box {
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-root);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #promptInput {
+      width: 100%;
+      height: 76px;
+      resize: none;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.4;
+      user-select: text;
+    }
+
+    .chat-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ---------- Provider / API Settings Modal ---------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 640px;
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body {
+      padding: 16px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .provider-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .provider-row label {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .provider-row input, .provider-row select {
+      width: 100%;
+    }
+
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <div class="brand">
+        <span class="brand-badge">QWEN</span>
+        <span>QwenStudio</span>
+      </div>
+
+      <div class="workspace-bar">
+        <span>📁</span>
+        <span class="workspace-path" id="workspacePathLabel">C:\Users\Bart\Projects\webcontacts</span>
+        <button class="btn" onclick="sendHost({action:'pickFolder'})">Browse…</button>
+        <button class="btn" onclick="sendHost({action:'openInExplorer'})" title="Open in Windows Explorer">↗</button>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <!-- Live llama-server GPU telemetry -->
+      <div class="telemetry-pill" title="Live Local llama-server Slot Telemetry (Port 8081)">
+        <span class="dot" id="gpuDot"></span>
+        <span id="gpuStatusText">llama-server: checking…</span>
+      </div>
+
+      <!-- Engine Switcher Pill -->
+      <button class="btn" id="engineToggleBtn" onclick="toggleEngineQuick()" title="Switch Agent Execution Engine (Qwen CLI vs Native .NET 9)" style="padding:4px 10px; font-size:11px; font-weight:700;">
+        📦 Qwen CLI
+      </button>
+
+      <!-- Testing / Verification Policy Pill -->
+      <button class="btn" id="testModeToggleBtn" onclick="cycleTestModeQuick()" title="Cycle Verification Policy: None (Direct) → Fast Sanity → Rigorous Tests" style="padding:4px 10px; font-size:11px; font-weight:700;">
+        🧪 Fast Sanity
+      </button>
+
+      <!-- Model / Provider Switcher -->
+      <select id="providerSelect" onchange="onProviderChanged()"></select>
+      <button class="btn" onclick="openSettingsModal()">⚙ Models / API Keys</button>
+    </div>
+  </div>
+
+  <!-- MAIN 3-COLUMN WORKBENCH -->
+  <div class="workbench">
+
+    <!-- LEFT SIDEBAR: FILES & CHAT HISTORY -->
+    <div class="sidebar">
+      <div class="sidebar-tabs">
+        <div class="sidebar-tab active" id="tabBtnFiles" onclick="switchSidebarTab('files')">Files</div>
+        <div class="sidebar-tab" id="tabBtnChats" onclick="switchSidebarTab('chats')">Chat History</div>
+      </div>
+
+      <!-- Files Pane -->
+      <div class="sidebar-pane active" id="paneFiles">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 6px 8px;">
+          <span style="font-size:11px; color:var(--text-muted); font-weight:600;">WORKSPACE EXPLORER</span>
+          <button class="btn" style="padding:2px 7px; font-size:11px;" onclick="sendHost({action:'refreshFiles'})">↻</button>
+        </div>
+        <div id="fileTreeList"></div>
+      </div>
+
+      <!-- Chats Pane -->
+      <div class="sidebar-pane" id="paneChats">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 6px 8px;">
+          <span style="font-size:11px; color:var(--text-muted); font-weight:600;">PAST SESSIONS (.qwen)</span>
+          <button class="btn btn-primary" style="padding:2px 8px; font-size:11px;" onclick="newChat()">+ New</button>
+        </div>
+        <div id="chatSessionsList"></div>
+      </div>
+    </div>
+
+    <!-- CENTER: MONACO CODE EDITOR + TABBED STREAM CONSOLE -->
+    <div class="center-col">
+      <div class="editor-header">
+        <div class="editor-tabs" id="editorTabs"></div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span id="editorStatusLabel" style="font-size:11px; color:var(--text-muted);"></span>
+          <button class="btn" onclick="saveCurrentFile()" title="Save File (Ctrl+S)">💾 Save</button>
+        </div>
+      </div>
+
+      <div class="editor-container">
+        <div id="monacoHost"></div>
+        <textarea id="fallbackEditor" spellcheck="false"></textarea>
+      </div>
+
+      <!-- BOTTOM CONSOLE ("SHOW ME DA MONEY") -->
+      <div class="console-panel">
+        <div class="console-header">
+          <div class="console-tabs">
+            <div class="console-tab active" id="conTabStream" onclick="switchConsoleTab('stream')">⚡ Live stream-json Feed</div>
+            <div class="console-tab" id="conTabTools" onclick="switchConsoleTab('tools')">🛠 Tool & File Events</div>
+            <div class="console-tab" id="conTabStderr" onclick="switchConsoleTab('stderr')">🖥 CLI Diagnostics</div>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px; cursor:pointer;" title="When unchecked, token-by-token deltas are merged into clean live-updating lines instead of 11 lines/sec">
+              <input type="checkbox" id="rawDeltasToggle" style="margin:0;" /> Raw Token Firehose
+            </label>
+            <span id="streamCounterLabel" style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">0 packets</span>
+            <button class="btn" style="padding:2px 8px; font-size:11px;" onclick="clearConsole()">Clear</button>
+          </div>
+        </div>
+
+        <div class="console-body active" id="conBodyStream"></div>
+        <div class="console-body" id="conBodyTools"></div>
+        <div class="console-body" id="conBodyStderr"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: ANTIGRAVITY AGENT CHAT -->
+    <div class="chat-col">
+      <div class="chat-header">
+        <div>
+          <span>Agent Chat</span>
+          <span id="sessionBadge" style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-left:6px;">(new session)</span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <label style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px; cursor:pointer;" title="Automatically compact session into PROJECT_SUMMARY.md when context exceeds 65k tokens">
+            <input type="checkbox" id="autoCompactToggle" onchange="onAutoCompactToggled(this.checked)" checked style="margin:0;" />
+            <span id="autoCompactLabel">Auto (&gt;65k)</span>
+          </label>
+          <button class="btn" id="compactBtn" onclick="compactSession()" title="Compact context into PROJECT_SUMMARY.md and start fresh turn">🗜 Compact</button>
+          <button class="btn" onclick="newChat()" title="Start a fresh chat session">New Chat</button>
+          <button class="btn btn-danger" id="stopBtn" style="display:none;" onclick="sendHost({action:'stopPrompt'})">⏹ Stop</button>
+        </div>
+      </div>
+
+      <div class="chat-stream" id="chatStream">
+        <div class="msg assistant">
+          <div class="msg-role"><span>🤖 QwenStudio Ready</span></div>
+          <div class="assistant-text">Select a workspace folder on the top bar or ask me to build, edit, or debug anything in the current project. Live thinking tokens and tool calls stream below in real time!</div>
+        </div>
+      </div>
+
+      <div class="chat-input-box">
+        <textarea id="promptInput" placeholder="Ask Qwen to build features, fix bugs, or explain code… (Ctrl+Enter to send)"></textarea>
+        <div class="chat-actions">
+          <span style="font-size:11px; color:var(--text-muted);" id="agentStateLabel">Idle</span>
+          <button class="btn btn-primary" id="sendBtn" onclick="sendPrompt()">Send Prompt ⏎</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SETTINGS / CLOUD LLM MODAL -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span>⚙ Local & Cloud LLM Providers (Qwen CLI Bridge)</span>
+        <button class="btn" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="providersModalBody" style="display:flex; flex-direction:column; gap:12px;"></div>
+        <div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:8px;">
+          <div style="font-size:12.5px; font-weight:700; margin-bottom:4px;">🗜 Unattended Context Compaction (Strategy A)</div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+            When long-running or overnight tasks fill context cache, automatically distill state into <code>PROJECT_SUMMARY.md</code>, wipe token history, and resume in a fresh session with &lt;2k context.
+          </div>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="modalAutoCompact" /> Auto-compact enabled
+            </label>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label style="font-size:12px; color:var(--text-muted);">Threshold:</label>
+              <input type="number" id="modalAutoCompactThreshold" style="width:85px;" min="10000" max="95000" step="5000" />
+              <span style="font-size:11px; color:var(--text-muted);">tokens (e.g. 65000)</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:8px;">
+          <div style="font-size:12.5px; font-weight:700; margin-bottom:4px;">✂️ In-Flight Context Pruning (Strategy B)</div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+            During long multi-turn tasks (30+ turns without pausing), automatically stubs historical file reads and clamps giant command dumps mid-flight so context never runs out.
+          </div>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="modalInFlightPruning" /> In-flight pruning enabled
+            </label>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label style="font-size:12px; color:var(--text-muted);">Threshold:</label>
+              <input type="number" id="modalInFlightPruningThreshold" style="width:85px;" min="10000" max="80000" step="5000" />
+              <span style="font-size:11px; color:var(--text-muted);">tokens (e.g. 40000)</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:8px;">
+          <div style="font-size:12.5px; font-weight:700; margin-bottom:4px;">🚀 Agent Execution Engine</div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+            Choose between the battle-tested Node.js Qwen CLI subprocess or the high-performance Native .NET 9 in-memory engine for honest side-by-side benchmarking.
+          </div>
+          <div style="display:flex; align-items:center; gap:24px;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+              <input type="radio" name="agentEngineRadio" value="qwen-cli" id="modalEngineQwenCli" /> 📦 Qwen CLI (Node.js Subprocess)
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; color:#10b981; font-weight:600;">
+              <input type="radio" name="agentEngineRadio" value="native" id="modalEngineNative" /> ⚡ Native .NET 9 Engine (In-Memory)
+            </label>
+          </div>
+        </div>
+        <div style="background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:8px;">
+          <div style="font-size:12.5px; font-weight:700; margin-bottom:4px;">🧪 Verification & Testing Policy</div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+            Control whether the agent skips tests for maximum speed, runs quick sanity checks, or builds and runs a rigorous automated smoke test suite.
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+              <input type="radio" name="testModeRadio" value="none" id="modalTestNone" />
+              <span><strong>⚡ Direct / No Tests</strong> — Fastest file generation, no testing overhead (~5–7 min).</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; color:#38bdf8;">
+              <input type="radio" name="testModeRadio" value="fast" id="modalTestFast" />
+              <span><strong>🧪 Fast Sanity (Recommended)</strong> — Rapid contract & CSS specificity checks (~6–8 min).</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer; color:#c084fc;">
+              <input type="radio" name="testModeRadio" value="rigorous" id="modalTestRigorous" />
+              <span><strong>🛡 Rigorous Autonomous</strong> — Writes test suite & iterates self-corrections until 100% green (~20–30 min).</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="addCustomProvider()">+ Add Provider</button>
+        <button class="btn btn-primary" onclick="saveProvidersModal()">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Monaco Editor from CDN with automatic fallback if offline -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs/loader.min.js"></script>
+  <script>
+    let studioSettings = null;
+    let currentWorkspace = "";
+    let currentSessionId = null;
+
+    // Editor state
+    let monacoEditor = null;
+    let monacoReady = false;
+    let openTabs = []; // { path, name, content }
+    let activeTabPath = null;
+
+    // Active streaming assistant message DOM references
+    let activeAssistantCard = null;
+    let activeThinkingEl = null;
+    let activeTextEl = null;
+    let activeToolInputBuffer = "";
+    let activeToolName = "";
+    let packetCount = 0;
+    let liveStreamDeltaEl = null;
+    let liveStreamDeltaKind = "";
+
+    // Initialize Monaco Editor
+    if (typeof require !== "undefined") {
+      require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.0/min/vs' } });
+      require(['vs/editor/editor.main'], function () {
+        monacoEditor = monaco.editor.create(document.getElementById('monacoHost'), {
+          value: "// Select a file from the left Explorer or watch files open automatically as Qwen writes code.\n",
+          language: 'javascript',
+          theme: 'vs-dark',
+          automaticLayout: true,
+          fontSize: 13,
+          fontFamily: "'Cascadia Code', Consolas, monospace",
+          minimap: { enabled: true },
+          scrollBeyondLastLine: false
+        });
+        monacoReady = true;
+
+        monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function () {
+          saveCurrentFile();
+        });
+      });
+    } else {
+      document.getElementById('monacoHost').style.display = 'none';
+      document.getElementById('fallbackEditor').style.display = 'block';
+    }
+
+    function sendHost(payload) {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(payload);
+      }
+    }
+
+    window.chrome.webview.addEventListener('message', event => {
+      const msg = event.data;
+      if (!msg || !msg.type) return;
+
+      switch (msg.type) {
+        case 'init':
+          currentWorkspace = msg.workspace;
+          currentSessionId = msg.sessionId;
+          studioSettings = msg.settings;
+          document.getElementById('workspacePathLabel').textContent = currentWorkspace;
+          document.getElementById('sessionBadge').textContent = currentSessionId ? currentSessionId.substring(0, 8) : '(new session)';
+          renderProviderSelect();
+          updateAutoCompactUi();
+          updateEngineUi();
+          updateTestModeUi();
+          break;
+
+        case 'workspaceChanged':
+          currentWorkspace = msg.workspace;
+          currentSessionId = msg.sessionId;
+          document.getElementById('workspacePathLabel').textContent = currentWorkspace;
+          document.getElementById('sessionBadge').textContent = currentSessionId ? currentSessionId.substring(0, 8) : '(new session)';
+          openTabs = [];
+          activeTabPath = null;
+          renderEditorTabs();
+          setEditorContent("// Workspace switched to " + currentWorkspace, "plaintext");
+          break;
+
+        case 'fileTree':
+          renderFileTree(msg.items || []);
+          break;
+
+        case 'fileContent':
+          openOrUpdateTab(msg.path, msg.name, msg.content);
+          break;
+
+        case 'fileChangedOnDisk':
+          // Log disk changes in console, but DO NOT auto-open files in editor tabs.
+          // Files are only opened when explicitly selected from Workspace Explorer.
+          appendConsole('conBodyTools', `[DISK UPDATE] ${msg.path}`, 'sys');
+          break;
+
+        case 'fileSaved':
+          document.getElementById('editorStatusLabel').textContent = 'Saved ✓';
+          setTimeout(() => { document.getElementById('editorStatusLabel').textContent = ''; }, 2000);
+          break;
+
+        case 'chatSessions':
+          renderChatSessions(msg.sessions || []);
+          break;
+
+        case 'sessionLoaded':
+          currentSessionId = msg.sessionId;
+          document.getElementById('sessionBadge').textContent = msg.sessionId.substring(0, 8);
+          renderLoadedSession(msg.messages || []);
+          break;
+
+        case 'chatCleared':
+          currentSessionId = null;
+          document.getElementById('sessionBadge').textContent = '(new session)';
+          document.getElementById('chatStream').innerHTML = '';
+          break;
+
+        case 'agentStarted':
+          setAgentBusy(true, `Running (${msg.model})…`);
+          createStreamingAssistantCard(msg.model);
+          appendConsole('conBodyTools', `▶ Prompt sent to ${msg.provider} (${msg.model})`, 'sys');
+          break;
+
+        case 'qwenStream':
+          handleQwenStreamPacket(msg.raw, msg.packet);
+          break;
+
+        case 'qwenStderr':
+          appendConsole('conBodyStderr', msg.line, 'err');
+          break;
+
+        case 'agentCompleted':
+          setAgentBusy(false, 'Idle');
+          if (msg.sessionId) {
+            currentSessionId = msg.sessionId;
+            document.getElementById('sessionBadge').textContent = msg.sessionId.substring(0, 8);
+          }
+          appendConsole('conBodyTools', `✔ Turn completed (exit code ${msg.exitCode})`, 'sys');
+          break;
+
+        case 'agentStopped':
+          setAgentBusy(false, 'Stopped by user');
+          appendConsole('conBodyTools', `⏹ Agent stopped by user`, 'err');
+          break;
+
+        case 'compactionStarted':
+          setAgentBusy(true, 'Compacting session…');
+          addSystemNotice(`🗜 <strong>Context Compaction Initiated (${escapeHtml(msg.trigger)})</strong><br/>Summarizing current architecture and completed work into <code>PROJECT_SUMMARY.md</code>...`);
+          appendConsole('conBodyTools', `🗜 Compaction started (${msg.trigger}). Generating PROJECT_SUMMARY.md...`, 'sys');
+          break;
+
+        case 'compactionPhase2':
+          addSystemNotice(`🧹 <strong>Context Memory Cleared</strong><br/>Released ${msg.cachedTokens ? msg.cachedTokens.toLocaleString() : '65k+'} cached tokens. Resuming project in fresh session from <code>PROJECT_SUMMARY.md</code>...`);
+          appendConsole('conBodyTools', `🧹 Context memory cleared (${msg.cachedTokens || 0} tokens). Starting fresh turn from PROJECT_SUMMARY.md`, 'sys');
+          break;
+
+        case 'compactionAborted':
+          addSystemNotice(`⚠️ <strong>Compaction Aborted</strong>: ${escapeHtml(msg.message)}`);
+          appendConsole('conBodyTools', `⚠️ Compaction aborted: ${msg.message}`, 'err');
+          break;
+
+        case 'autoCompactTriggered':
+          addSystemNotice(`⚡ <strong>Auto-Compaction Triggered</strong>: Cached context reached ${msg.nPrompt.toLocaleString()} tokens (threshold: ${msg.threshold.toLocaleString()}). Compacting automatically...`);
+          appendConsole('conBodyTools', `⚡ Auto-compact triggered: ${msg.nPrompt} >= ${msg.threshold} tokens`, 'sys');
+          break;
+
+        case 'inFlightPruning':
+          addSystemNotice(`✂️ <strong>In-Flight Context Pruned:</strong> Saved ${msg.savedTokens.toLocaleString()} tokens of historical file/command outputs. Working context reduced from ${msg.originalTokens.toLocaleString()} to ${msg.prunedTokens.toLocaleString()} tokens.`);
+          appendConsole('conBodyTools', `✂️ In-flight pruning: Pruned ${msg.savedTokens.toLocaleString()} tokens (now ${msg.prunedTokens.toLocaleString()} tokens)`, 'sys');
+          break;
+
+        case 'telemetry':
+          updateTelemetryBar(msg);
+          break;
+
+        case 'settingsSaved':
+          studioSettings = msg.settings;
+          renderProviderSelect();
+          updateAutoCompactUi();
+          updateEngineUi();
+          updateTestModeUi();
+          closeSettingsModal();
+          break;
+
+        case 'error':
+          appendConsole('conBodyStderr', `[ERROR] ${msg.message}`, 'err');
+          break;
+
+        case 'fileError':
+          appendConsole('conBodyStderr', `[FILE] ${msg.message}`, 'err');
+          break;
+
+        case 'agentError':
+          appendConsole('conBodyStderr', `[AGENT ERROR] ${msg.message}`, 'err');
+          setAgentBusy(false, 'Agent Error');
+          break;
+      }
+    });
+
+    function renderFileTree(items) {
+      const container = document.getElementById('fileTreeList');
+      container.innerHTML = '';
+      if (items.length === 0) {
+        container.innerHTML = '<div style="padding:10px; font-size:12px; color:var(--text-muted);">Folder is empty</div>';
+        return;
+      }
+
+      items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'tree-item' + (item.path === activeTabPath ? ' active' : '');
+        row.style.paddingLeft = (8 + item.depth * 14) + 'px';
+        const icon = item.isDirectory ? '📁' : getFileIcon(item.name);
+        row.innerHTML = `<span class="icon">${icon}</span><span>${escapeHtml(item.name)}</span>`;
+        if (!item.isDirectory) {
+          row.onclick = () => sendHost({ action: 'readFile', path: item.path });
+        }
+        container.appendChild(row);
+      });
+    }
+
+    function getFileIcon(name) {
+      const lower = name.toLowerCase();
+      if (lower.endsWith('.cs') || lower.endsWith('.csproj')) return '🟣';
+      if (lower.endsWith('.js') || lower.endsWith('.ts')) return '🟨';
+      if (lower.endsWith('.html') || lower.endsWith('.htm')) return '🟧';
+      if (lower.endsWith('.css')) return '🟦';
+      if (lower.endsWith('.json') || lower.endsWith('.jsonl')) return '📋';
+      if (lower.endsWith('.py')) return '🐍';
+      if (lower.endsWith('.md')) return '📝';
+      return '📄';
+    }
+
+    function detectLanguage(name) {
+      const lower = name.toLowerCase();
+      if (lower.endsWith('.cs')) return 'csharp';
+      if (lower.endsWith('.js')) return 'javascript';
+      if (lower.endsWith('.ts')) return 'typescript';
+      if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'html';
+      if (lower.endsWith('.css')) return 'css';
+      if (lower.endsWith('.json') || lower.endsWith('.jsonl')) return 'json';
+      if (lower.endsWith('.py')) return 'python';
+      if (lower.endsWith('.ps1')) return 'powershell';
+      if (lower.endsWith('.md')) return 'markdown';
+      if (lower.endsWith('.xml') || lower.endsWith('.csproj')) return 'xml';
+      return 'plaintext';
+    }
+
+    function openOrUpdateTab(path, name, content) {
+      let existing = openTabs.find(t => t.path === path);
+      if (existing) {
+        existing.content = content;
+      } else {
+        existing = { path, name, content };
+        openTabs.push(existing);
+      }
+      activeTabPath = path;
+      renderEditorTabs();
+      setEditorContent(content, detectLanguage(name));
+    }
+
+    function renderEditorTabs() {
+      const bar = document.getElementById('editorTabs');
+      bar.innerHTML = '';
+      openTabs.forEach(tab => {
+        const el = document.createElement('div');
+        el.className = 'editor-tab' + (tab.path === activeTabPath ? ' active' : '');
+        el.innerHTML = `<span>${escapeHtml(tab.name)}</span><span class="close-tab">✕</span>`;
+        el.onclick = (e) => {
+          if (e.target.classList.contains('close-tab')) {
+            openTabs = openTabs.filter(t => t.path !== tab.path);
+            if (activeTabPath === tab.path) {
+              activeTabPath = openTabs.length ? openTabs[openTabs.length - 1].path : null;
+            }
+            renderEditorTabs();
+            if (activeTabPath) {
+              const next = openTabs.find(t => t.path === activeTabPath);
+              setEditorContent(next.content, detectLanguage(next.name));
+            } else {
+              setEditorContent('', 'plaintext');
+            }
+          } else {
+            activeTabPath = tab.path;
+            renderEditorTabs();
+            setEditorContent(tab.content, detectLanguage(tab.name));
+          }
+        };
+        bar.appendChild(el);
+      });
+    }
+
+    function setEditorContent(content, language) {
+      if (monacoReady && monacoEditor) {
+        const model = monacoEditor.getModel();
+        if (model) {
+          monaco.editor.setModelLanguage(model, language);
+          if (monacoEditor.getValue() !== content) {
+            monacoEditor.setValue(content);
+          }
+        }
+      } else {
+        document.getElementById('fallbackEditor').value = content;
+      }
+    }
+
+    function saveCurrentFile() {
+      if (!activeTabPath) return;
+      const content = (monacoReady && monacoEditor)
+        ? monacoEditor.getValue()
+        : document.getElementById('fallbackEditor').value;
+      const tab = openTabs.find(t => t.path === activeTabPath);
+      if (tab) tab.content = content;
+      sendHost({ action: 'saveFile', path: activeTabPath, content });
+    }
+
+    function createStreamingAssistantCard(modelName) {
+      const stream = document.getElementById('chatStream');
+      const card = document.createElement('div');
+      card.className = 'msg assistant';
+      card.innerHTML = `
+        <div class="msg-role">
+          <span>🤖 ${escapeHtml(modelName)}</span>
+          <span class="live-status" style="color:var(--amber);">streaming…</span>
+        </div>
+        <div class="thinking-box" style="display:none;">
+          <div class="thinking-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+            <span>🧠 Live Thinking</span><span>▾</span>
+          </div>
+          <div class="thinking-content"></div>
+        </div>
+        <div class="tools-container"></div>
+        <div class="assistant-text"></div>
+      `;
+      stream.appendChild(card);
+      stream.scrollTop = stream.scrollHeight;
+
+      activeAssistantCard = card;
+      activeThinkingEl = card.querySelector('.thinking-content');
+      activeTextEl = card.querySelector('.assistant-text');
+    }
+
+    function handleQwenStreamPacket(rawLine, packet) {
+      packetCount++;
+      document.getElementById('streamCounterLabel').textContent = `${packetCount} packets`;
+
+      const showRawFirehose = document.getElementById('rawDeltasToggle') && document.getElementById('rawDeltasToggle').checked;
+
+      // Smart-coalesce token deltas in the "Live stream-json Feed" tab unless Raw Firehose is checked
+      if (showRawFirehose) {
+        liveStreamDeltaEl = null;
+        appendConsole('conBodyStream', rawLine, packet.type === 'stream_event' ? '' : 'sys');
+      } else if (packet.type === 'stream_event' && packet.event) {
+        const ev = packet.event;
+        if (ev.type === 'content_block_delta' && ev.delta) {
+          const d = ev.delta;
+          const kind = d.type || 'delta';
+          const chunk = d.thinking || d.text || d.partial_json || '';
+          if (chunk) {
+            if (!liveStreamDeltaEl || liveStreamDeltaKind !== kind) {
+              const prefix = kind === 'thinking_delta' ? '🧠 [THINKING] '
+                           : kind === 'input_json_delta' ? `🛠 [${activeToolName || 'TOOL'} ARGS] `
+                           : '💬 [RESPONSE] ';
+              const cls = kind === 'thinking_delta' ? 'think'
+                        : kind === 'input_json_delta' ? 'tool'
+                        : '';
+              liveStreamDeltaEl = appendConsole('conBodyStream', prefix + chunk, cls);
+              liveStreamDeltaKind = kind;
+            } else {
+              liveStreamDeltaEl.textContent += chunk;
+              const c = document.getElementById('conBodyStream');
+              c.scrollTop = c.scrollHeight;
+            }
+          }
+        } else if (ev.type === 'content_block_start' && ev.content_block && ev.content_block.type === 'tool_use') {
+          liveStreamDeltaEl = null;
+          appendConsole('conBodyStream', `▶ [TOOL_USE START] ${ev.content_block.name} (id: ${ev.content_block.id})`, 'tool');
+        } else if (ev.type === 'message_stop') {
+          liveStreamDeltaEl = null;
+        }
+      } else {
+        liveStreamDeltaEl = null;
+        // Summarize top-level non-delta packets (init, tool_result, result) cleanly
+        if (packet.type === 'system' && packet.subtype === 'init') {
+          appendConsole('conBodyStream', `⚡ [SESSION INIT] model=${packet.model} | cwd=${packet.cwd} | tools=${(packet.tools || []).length}`, 'sys');
+        } else if (packet.type === 'user' && packet.message && Array.isArray(packet.message.content)) {
+          packet.message.content.forEach(item => {
+            if (item.type === 'tool_result') {
+              const statusIcon = item.is_error ? '❌ [TOOL ERROR]' : '✔ [TOOL RESULT]';
+              const cls = item.is_error ? 'err' : 'sys';
+              const preview = typeof item.content === 'string'
+                ? item.content.replace(/\s+/g, ' ').substring(0, 220)
+                : JSON.stringify(item.content).substring(0, 220);
+              appendConsole('conBodyStream', `${statusIcon} ${preview}`, cls);
+            }
+          });
+        } else if (packet.type === 'result') {
+          appendConsole('conBodyStream', `🏁 [TURN COMPLETE] duration=${packet.duration_ms}ms | turns=${packet.num_turns}`, 'sys');
+        }
+      }
+
+      if (!activeAssistantCard) {
+        createStreamingAssistantCard('Assistant');
+      }
+
+      if (packet.type === 'stream_event' && packet.event) {
+        const ev = packet.event;
+        if (ev.type === 'content_block_start' && ev.content_block) {
+          if (ev.content_block.type === 'thinking') {
+            activeAssistantCard.querySelector('.thinking-box').style.display = 'block';
+          } else if (ev.content_block.type === 'tool_use') {
+            activeToolName = ev.content_block.name || 'tool';
+            activeToolInputBuffer = '';
+            const pill = document.createElement('div');
+            pill.className = 'tool-pill';
+            pill.innerHTML = `🛠 <strong>${escapeHtml(activeToolName)}</strong> <span class="tool-args-preview">streaming args…</span>`;
+            activeAssistantCard.querySelector('.tools-container').appendChild(pill);
+            appendConsole('conBodyTools', `🛠 Tool Call Started: ${activeToolName}`, 'tool');
+          }
+        } else if (ev.type === 'content_block_delta' && ev.delta) {
+          if (ev.delta.type === 'thinking_delta' && ev.delta.thinking) {
+            activeAssistantCard.querySelector('.thinking-box').style.display = 'block';
+            activeThinkingEl.textContent += ev.delta.thinking;
+            const box = activeAssistantCard.querySelector('.thinking-box');
+            box.scrollTop = box.scrollHeight;
+          } else if (ev.delta.type === 'text_delta' && ev.delta.text) {
+            activeTextEl.textContent += ev.delta.text;
+          } else if (ev.delta.type === 'input_json_delta' && ev.delta.partial_json) {
+            activeToolInputBuffer += ev.delta.partial_json;
+            const pills = activeAssistantCard.querySelectorAll('.tool-pill .tool-args-preview');
+            if (pills.length > 0) {
+              const lastPreview = pills[pills.length - 1];
+              lastPreview.textContent = activeToolInputBuffer.length > 95
+                ? activeToolInputBuffer.substring(0, 95) + '…'
+                : activeToolInputBuffer;
+            }
+          }
+        } else if (ev.type === 'content_block_stop') {
+          if (activeToolInputBuffer) {
+            appendConsole('conBodyTools', `   Args: ${activeToolInputBuffer}`, 'tool');
+            try {
+              const parsed = JSON.parse(activeToolInputBuffer);
+              const targetFile = parsed.file_path || parsed.path;
+              if (targetFile) {
+                const pills = activeAssistantCard.querySelectorAll('.tool-pill');
+                const lastPill = pills[pills.length - 1];
+                if (lastPill) {
+                  lastPill.onclick = () => sendHost({ action: 'readFile', path: targetFile });
+                }
+              }
+            } catch {}
+            activeToolInputBuffer = '';
+          }
+        }
+      } else if (packet.type === 'result' && packet.result) {
+        if (!activeTextEl.textContent && typeof packet.result === 'string') {
+          activeTextEl.textContent = packet.result;
+        }
+      }
+
+      const stream = document.getElementById('chatStream');
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    function sendPrompt() {
+      const input = document.getElementById('promptInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const stream = document.getElementById('chatStream');
+      const userCard = document.createElement('div');
+      userCard.className = 'msg user';
+      userCard.innerHTML = `
+        <div class="msg-role"><span>👤 You</span></div>
+        <div class="assistant-text">${escapeHtml(text)}</div>
+      `;
+      stream.appendChild(userCard);
+      stream.scrollTop = stream.scrollHeight;
+
+      input.value = '';
+      sendHost({ action: 'sendPrompt', prompt: text });
+    }
+
+    document.getElementById('promptInput').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        sendPrompt();
+      }
+    });
+
+    function newChat() {
+      sendHost({ action: 'newChat' });
+    }
+
+    function compactSession() {
+      if (!currentSessionId) {
+        appendConsole('conBodyTools', 'ℹ No active session to compact.', 'sys');
+        alert('There is no active session to compact. Start a conversation first!');
+        return;
+      }
+      if (confirm("Compact current session into PROJECT_SUMMARY.md?\n\nThe agent will summarize progress and architecture, clear old token memory, and continue in a fresh session at <2k context.")) {
+        sendHost({ action: 'compactSession' });
+      }
+    }
+
+    function onAutoCompactToggled(checked) {
+      if (!studioSettings) return;
+      studioSettings.AutoCompact = checked;
+      sendHost({ action: 'toggleAutoCompact', enabled: checked });
+    }
+
+    function updateAutoCompactUi() {
+      if (!studioSettings) return;
+      const toggle = document.getElementById('autoCompactToggle');
+      if (toggle) toggle.checked = studioSettings.AutoCompact !== false;
+      const label = document.getElementById('autoCompactLabel');
+      if (label && studioSettings.AutoCompactThreshold) {
+        const kVal = Math.round(studioSettings.AutoCompactThreshold / 1000);
+        label.textContent = `Auto (>${kVal}k)`;
+      }
+    }
+
+    function updateEngineUi() {
+      if (!studioSettings) return;
+      const btn = document.getElementById('engineToggleBtn');
+      const isNative = studioSettings.AgentEngine === 'native';
+      if (btn) {
+        btn.innerHTML = isNative ? '⚡ Native .NET 9' : '📦 Qwen CLI';
+        btn.style.borderColor = isNative ? '#10b981' : 'var(--border)';
+        btn.style.color = isNative ? '#10b981' : 'var(--text)';
+      }
+    }
+
+    function toggleEngineQuick() {
+      if (!studioSettings) return;
+      studioSettings.AgentEngine = (studioSettings.AgentEngine === 'native') ? 'qwen-cli' : 'native';
+      updateEngineUi();
+      sendHost({ action: 'saveSettings', settings: studioSettings });
+      addSystemNotice(`🔄 <strong>Agent Execution Engine Switched:</strong> ${studioSettings.AgentEngine === 'native' ? '<span style="color:#10b981; font-weight:700;">⚡ Native .NET 9 Engine (In-Memory)</span>' : '<span style="color:#a855f7; font-weight:700;">📦 Qwen CLI (Node.js Subprocess)</span>'}`);
+    }
+
+    function updateTestModeUi() {
+      if (!studioSettings) return;
+      const btn = document.getElementById('testModeToggleBtn');
+      const mode = (studioSettings.TestMode || 'fast').toLowerCase();
+      if (btn) {
+        if (mode === 'none') {
+          btn.innerHTML = '⚡ Direct (No Tests)';
+          btn.style.borderColor = 'var(--border)';
+          btn.style.color = 'var(--text-muted)';
+        } else if (mode === 'rigorous') {
+          btn.innerHTML = '🛡 Rigorous Tests';
+          btn.style.borderColor = '#c084fc';
+          btn.style.color = '#c084fc';
+        } else {
+          btn.innerHTML = '🧪 Fast Sanity';
+          btn.style.borderColor = '#38bdf8';
+          btn.style.color = '#38bdf8';
+        }
+      }
+    }
+
+    function cycleTestModeQuick() {
+      if (!studioSettings) return;
+      const cur = (studioSettings.TestMode || 'fast').toLowerCase();
+      const next = (cur === 'none') ? 'fast' : (cur === 'fast') ? 'rigorous' : 'none';
+      studioSettings.TestMode = next;
+      updateTestModeUi();
+      sendHost({ action: 'saveSettings', settings: studioSettings });
+      const label = next === 'none' ? '⚡ Direct (No Tests)' : next === 'rigorous' ? '🛡 Rigorous Autonomous Testing' : '🧪 Fast Sanity Checks';
+      addSystemNotice(`🔄 <strong>Verification Policy Changed:</strong> ${label}`);
+    }
+
+    function addSystemNotice(html) {
+      const stream = document.getElementById('chatStream');
+      const card = document.createElement('div');
+      card.className = 'msg sys-notice';
+      card.innerHTML = html;
+      stream.appendChild(card);
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    function setAgentBusy(busy, label) {
+      document.getElementById('agentStateLabel').textContent = label;
+      document.getElementById('sendBtn').disabled = busy;
+      const compactBtn = document.getElementById('compactBtn');
+      if (compactBtn) compactBtn.disabled = busy;
+      document.getElementById('stopBtn').style.display = busy ? 'inline-flex' : 'none';
+      if (!busy && activeAssistantCard) {
+        const badge = activeAssistantCard.querySelector('.live-status');
+        if (badge) {
+          badge.textContent = 'done ✓';
+          badge.style.color = 'var(--green)';
+        }
+      }
+    }
+
+    function renderChatSessions(sessions) {
+      const list = document.getElementById('chatSessionsList');
+      list.innerHTML = '';
+      if (sessions.length === 0) {
+        list.innerHTML = '<div style="padding:10px; font-size:12px; color:var(--text-muted);">No saved sessions for this folder yet</div>';
+        return;
+      }
+
+      sessions.forEach(s => {
+        const card = document.createElement('div');
+        const isActive = s.isActive || s.sessionId === currentSessionId;
+        card.className = 'session-card' + (isActive ? ' active' : '');
+        card.innerHTML = `
+          <div class="session-title">${escapeHtml(s.title)}</div>
+          <div class="session-meta">
+            <span>${s.messageCount} msgs</span>
+            <span>${escapeHtml(s.lastModified)}</span>
+          </div>
+          <button class="session-del" title="Delete session">🗑</button>
+        `;
+        card.onclick = (e) => {
+          if (e.target.classList.contains('session-del')) {
+            e.stopPropagation();
+            sendHost({ action: 'deleteSession', file: s.file });
+          } else {
+            sendHost({ action: 'loadSession', sessionId: s.sessionId, file: s.file });
+          }
+        };
+        list.appendChild(card);
+      });
+    }
+
+    function renderLoadedSession(messages) {
+      const stream = document.getElementById('chatStream');
+      stream.innerHTML = '';
+      messages.forEach(m => {
+        const card = document.createElement('div');
+        if (m.role === 'user') {
+          card.className = 'msg user';
+          card.innerHTML = `<div class="msg-role"><span>👤 You</span></div><div class="assistant-text">${escapeHtml(m.text)}</div>`;
+        } else {
+          card.className = 'msg assistant';
+          let html = `<div class="msg-role"><span>🤖 Assistant</span></div>`;
+          if (m.thinking) {
+            html += `<div class="thinking-box"><div class="thinking-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'"><span>🧠 Thinking</span><span>▾</span></div><div class="thinking-content" style="display:none;">${escapeHtml(m.thinking)}</div></div>`;
+          }
+          if (m.tools && m.tools.length) {
+            m.tools.forEach(t => {
+              html += `<div class="tool-pill">🛠 <strong>${escapeHtml(t.name)}</strong> ${escapeHtml((t.args || '').substring(0, 80))}</div>`;
+            });
+          }
+          if (m.text) {
+            html += `<div class="assistant-text">${escapeHtml(m.text)}</div>`;
+          }
+          card.innerHTML = html;
+        }
+        stream.appendChild(card);
+      });
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    function updateTelemetryBar(t) {
+      const dot = document.getElementById('gpuDot');
+      const txt = document.getElementById('gpuStatusText');
+      if (!t.online) {
+        dot.className = 'dot';
+        txt.textContent = 'Local 8081: Offline';
+        return;
+      }
+      if (t.modelStatus === 'loading') {
+        dot.className = 'dot busy';
+        txt.textContent = `Loading ${t.activeModel || 'model'} into VRAM…`;
+        return;
+      }
+      if (t.isProcessing) {
+        dot.className = 'dot busy';
+        if (t.nDecoded === 0 && t.nPrompt > 0) {
+          txt.textContent = `Prefill: ${t.nPromptProcessed || 0} / ${t.nPrompt} ctx`;
+        } else {
+          txt.textContent = `GPU Busy | ${t.tps.toFixed(1)} t/s | ${t.nDecoded} gen (${t.nPrompt} ctx)`;
+        }
+      } else {
+        dot.className = 'dot online';
+        txt.textContent = `Radeon 8060S Ready | ${t.nPrompt} cached ctx`;
+      }
+    }
+
+    function switchSidebarTab(tab) {
+      document.getElementById('tabBtnFiles').classList.toggle('active', tab === 'files');
+      document.getElementById('tabBtnChats').classList.toggle('active', tab === 'chats');
+      document.getElementById('paneFiles').classList.toggle('active', tab === 'files');
+      document.getElementById('paneChats').classList.toggle('active', tab === 'chats');
+    }
+
+    function switchConsoleTab(tab) {
+      document.getElementById('conTabStream').classList.toggle('active', tab === 'stream');
+      document.getElementById('conTabTools').classList.toggle('active', tab === 'tools');
+      document.getElementById('conTabStderr').classList.toggle('active', tab === 'stderr');
+      document.getElementById('conBodyStream').classList.toggle('active', tab === 'stream');
+      document.getElementById('conBodyTools').classList.toggle('active', tab === 'tools');
+      document.getElementById('conBodyStderr').classList.toggle('active', tab === 'stderr');
+    }
+
+    function appendConsole(containerId, text, cls) {
+      const c = document.getElementById(containerId);
+      const line = document.createElement('div');
+      line.className = 'log-line ' + (cls || '');
+      line.textContent = text;
+      c.appendChild(line);
+      if (c.childNodes.length > 400) {
+        c.removeChild(c.firstChild);
+      }
+      c.scrollTop = c.scrollHeight;
+      return line;
+    }
+
+    function clearConsole() {
+      document.getElementById('conBodyStream').innerHTML = '';
+      document.getElementById('conBodyTools').innerHTML = '';
+      document.getElementById('conBodyStderr').innerHTML = '';
+      liveStreamDeltaEl = null;
+      liveStreamDeltaKind = '';
+      packetCount = 0;
+      document.getElementById('streamCounterLabel').textContent = '0 packets';
+    }
+
+    function renderProviderSelect() {
+      if (!studioSettings || !studioSettings.Providers) return;
+      const sel = document.getElementById('providerSelect');
+      sel.innerHTML = '';
+      studioSettings.Providers.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.Id;
+        opt.textContent = p.Name;
+        if (p.Id === studioSettings.ActiveProviderId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    function onProviderChanged() {
+      const sel = document.getElementById('providerSelect');
+      studioSettings.ActiveProviderId = sel.value;
+      sendHost({ action: 'saveSettings', settings: studioSettings });
+    }
+
+    function openSettingsModal() {
+      const body = document.getElementById('providersModalBody');
+      body.innerHTML = '';
+      studioSettings.Providers.forEach((p, idx) => {
+        const div = document.createElement('div');
+        div.className = 'provider-row';
+        div.innerHTML = `
+          <div>
+            <label>Profile Name</label>
+            <input type="text" data-idx="${idx}" data-field="Name" value="${escapeHtml(p.Name)}" />
+          </div>
+          <div>
+            <label>Model ID</label>
+            <input type="text" data-idx="${idx}" data-field="Model" value="${escapeHtml(p.Model)}" />
+          </div>
+          <div>
+            <label>Base URL (OpenAI endpoint)</label>
+            <input type="text" data-idx="${idx}" data-field="BaseUrl" value="${escapeHtml(p.BaseUrl)}" placeholder="http://127.0.0.1:8081/v1 or https://..." />
+          </div>
+          <div>
+            <label>API Key (for Gemini / DeepSeek / OpenRouter)</label>
+            <input type="password" data-idx="${idx}" data-field="ApiKey" value="${escapeHtml(p.ApiKey)}" placeholder="sk-... or local-no-key-needed" />
+          </div>
+        `;
+        body.appendChild(div);
+      });
+      const autoCompEl = document.getElementById('modalAutoCompact');
+      if (autoCompEl) autoCompEl.checked = studioSettings.AutoCompact !== false;
+      const threshEl = document.getElementById('modalAutoCompactThreshold');
+      if (threshEl) threshEl.value = studioSettings.AutoCompactThreshold || 65000;
+
+      const inFlightEl = document.getElementById('modalInFlightPruning');
+      if (inFlightEl) inFlightEl.checked = studioSettings.InFlightPruningEnabled !== false;
+      const inFlightThreshEl = document.getElementById('modalInFlightPruningThreshold');
+      if (inFlightThreshEl) inFlightThreshEl.value = studioSettings.InFlightPruningThreshold || 40000;
+
+      const isNative = studioSettings && studioSettings.AgentEngine === 'native';
+      const radCli = document.getElementById('modalEngineQwenCli');
+      const radNat = document.getElementById('modalEngineNative');
+      if (radCli && radNat) {
+        radCli.checked = !isNative;
+        radNat.checked = isNative;
+      }
+
+      const testMode = (studioSettings.TestMode || 'fast').toLowerCase();
+      const radNone = document.getElementById('modalTestNone');
+      const radFast = document.getElementById('modalTestFast');
+      const radRig = document.getElementById('modalTestRigorous');
+      if (radNone && radFast && radRig) {
+        radNone.checked = (testMode === 'none');
+        radFast.checked = (testMode === 'fast');
+        radRig.checked = (testMode === 'rigorous');
+      }
+
+      document.getElementById('settingsModal').classList.add('open');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    function addCustomProvider() {
+      studioSettings.Providers.push({
+        Id: 'custom-' + Date.now(),
+        Name: 'Cloud: Custom Provider',
+        AuthType: 'openai',
+        BaseUrl: 'https://openrouter.ai/api/v1',
+        ApiKey: '',
+        Model: 'deepseek/deepseek-chat',
+        IsLocal: false
+      });
+      openSettingsModal();
+    }
+
+    function saveProvidersModal() {
+      const inputs = document.querySelectorAll('#providersModalBody input');
+      inputs.forEach(inp => {
+        const idx = parseInt(inp.getAttribute('data-idx'), 10);
+        const field = inp.getAttribute('data-field');
+        studioSettings.Providers[idx][field] = inp.value;
+      });
+
+      const autoCompEl = document.getElementById('modalAutoCompact');
+      if (autoCompEl) studioSettings.AutoCompact = autoCompEl.checked;
+      const threshEl = document.getElementById('modalAutoCompactThreshold');
+      if (threshEl) studioSettings.AutoCompactThreshold = parseInt(threshEl.value, 10) || 65000;
+
+      const inFlightEl = document.getElementById('modalInFlightPruning');
+      if (inFlightEl) studioSettings.InFlightPruningEnabled = inFlightEl.checked;
+      const inFlightThreshEl = document.getElementById('modalInFlightPruningThreshold');
+      if (inFlightThreshEl) studioSettings.InFlightPruningThreshold = parseInt(inFlightThreshEl.value, 10) || 40000;
+
+      const radNat = document.getElementById('modalEngineNative');
+      if (radNat) {
+        studioSettings.AgentEngine = radNat.checked ? 'native' : 'qwen-cli';
+      }
+
+      const radNone = document.getElementById('modalTestNone');
+      const radRig = document.getElementById('modalTestRigorous');
+      if (radNone && radNone.checked) studioSettings.TestMode = 'none';
+      else if (radRig && radRig.checked) studioSettings.TestMode = 'rigorous';
+      else studioSettings.TestMode = 'fast';
+
+      updateAutoCompactUi();
+      updateEngineUi();
+      updateTestModeUi();
+
+      sendHost({ action: 'saveSettings', settings: studioSettings });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Notify C# host that UI is ready
+    sendHost({ action: 'ready' });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,26 @@
+## .NET and Visual Studio
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+_ReSharper*/
+*.suo
+*.userprefs
+
+## Logs and diagnostics
+*.log
+crash.log
+*.tmp
+*.crash
+
+## WebView2 user data
+**/WebView2/
+**/EBWebView/
+
+## Build outputs
+*.dll
+*.exe
+*.pdb
+*.cache
