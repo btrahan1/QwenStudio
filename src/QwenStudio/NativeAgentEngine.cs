@@ -146,11 +146,6 @@ public sealed class NativeAgentEngine : IDisposable
 
                     if (allReadOnly && toolCalls.Count > 1)
                     {
-                        foreach (var tc in toolCalls)
-                        {
-                            PostToolUseStart(tc.Name, tc.Id);
-                        }
-
                         var parallelTasks = toolCalls.Select(async tc =>
                         {
                             var sw = Stopwatch.StartNew();
@@ -182,21 +177,11 @@ public sealed class NativeAgentEngine : IDisposable
                         {
                             if (ct.IsCancellationRequested) break;
 
-                            PostToolUseStart(tc.Name, tc.Id);
-
                             var sw = Stopwatch.StartNew();
                             var result = await ExecuteToolAsync(tc.Name, tc.Arguments, workspace, ct);
                             sw.Stop();
 
                             PostToolResult(result.Output, result.Success);
-
-                            // P0 Proactive Write Eviction: Once written to disk, disk is ground truth.
-                            // Compact raw file contents in the in-memory assistant message so KV cache doesn't bloat.
-                            // Note: NEVER compact edit_file (new_string must stay verbatim so the model remembers the snippet).
-                            if (result.Success && tc.Name == "write_file")
-                            {
-                                CompactToolCallArguments(assistantMsg, tc.Id);
-                            }
 
                             lock (_messageHistory)
                             {
@@ -477,6 +462,7 @@ public sealed class NativeAgentEngine : IDisposable
         // Micro-batching buffers (25ms flush window) to throttle IPC overhead across WebView2
         var thinkingBatch = new StringBuilder();
         var contentBatch = new StringBuilder();
+        var toolArgsBatch = new StringBuilder();
         long lastFlushTicks = Stopwatch.GetTimestamp();
 
         void FlushThinking(bool force = false)
@@ -497,6 +483,17 @@ public sealed class NativeAgentEngine : IDisposable
             {
                 PostContentChunk(contentBatch.ToString());
                 contentBatch.Clear();
+                lastFlushTicks = Stopwatch.GetTimestamp();
+            }
+        }
+
+        void FlushToolArgs(bool force = false)
+        {
+            if (toolArgsBatch.Length == 0) return;
+            if (force || Stopwatch.GetElapsedTime(lastFlushTicks).TotalMilliseconds >= 25 || toolArgsBatch.ToString().Contains('\n'))
+            {
+                PostToolArgsChunk(toolArgsBatch.ToString());
+                toolArgsBatch.Clear();
                 lastFlushTicks = Stopwatch.GetTimestamp();
             }
         }
@@ -566,10 +563,23 @@ public sealed class NativeAgentEngine : IDisposable
                         if (fn != null)
                         {
                             var fnName = fn["name"]?.GetValue<string?>();
-                            if (!string.IsNullOrEmpty(fnName)) item.Name = fnName;
+                            if (!string.IsNullOrEmpty(fnName))
+                            {
+                                if (string.IsNullOrEmpty(item.Name))
+                                {
+                                    var idVal = string.IsNullOrEmpty(item.Id) ? $"call_{Guid.NewGuid():N}" : item.Id;
+                                    PostToolUseStart(fnName, idVal);
+                                }
+                                item.Name = fnName;
+                            }
 
                             var fnArgs = fn["arguments"]?.GetValue<string?>();
-                            if (!string.IsNullOrEmpty(fnArgs)) item.Args.Append(fnArgs);
+                            if (!string.IsNullOrEmpty(fnArgs))
+                            {
+                                item.Args.Append(fnArgs);
+                                toolArgsBatch.Append(fnArgs);
+                                FlushToolArgs(force: false);
+                            }
                         }
 
                         toolCallsAcc[index] = item;
@@ -582,6 +592,7 @@ public sealed class NativeAgentEngine : IDisposable
         // Flush any remaining buffered tokens
         FlushThinking(force: true);
         FlushContent(force: true);
+        FlushToolArgs(force: true);
 
         var resultTools = new List<ToolCallItem>();
         foreach (var kvp in toolCallsAcc)
@@ -830,33 +841,6 @@ public sealed class NativeAgentEngine : IDisposable
                         m["content"] = $"[Output of {toolName} ({content.Length:N0} chars) pruned from memory. Details on disk.]";
                     }
                 }
-                else if (role == "assistant")
-                {
-                    var toolCalls = m["tool_calls"]?.AsArray();
-                    if (toolCalls != null)
-                    {
-                        foreach (var tc in toolCalls)
-                        {
-                            var fn = tc?["function"];
-                            var fnName = fn?["name"]?.GetValue<string>();
-                            var rawArgs = fn?["arguments"]?.GetValue<string>() ?? "";
-
-                            if ((fnName == "write_file" || fnName == "edit_file") && rawArgs.Length > 600)
-                            {
-                                try
-                                {
-                                    var argsNode = JsonNode.Parse(rawArgs);
-                                    if (argsNode?["content"] != null)
-                                    {
-                                        argsNode["content"] = "[File content written to disk in earlier turn.]";
-                                        fn!["arguments"] = argsNode.ToJsonString();
-                                    }
-                                }
-                                catch { }
-                            }
-                        }
-                    }
-                }
             }
         }
     }
@@ -880,44 +864,6 @@ public sealed class NativeAgentEngine : IDisposable
     {
         var parts = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         return parts.Any(p => p is ".git" or "node_modules" or "bin" or "obj" or ".vs" or ".qwen" or "__pycache__");
-    }
-
-    private static void CompactToolCallArguments(JsonObject assistantMsg, string toolCallId)
-    {
-        var toolCalls = assistantMsg["tool_calls"]?.AsArray();
-        if (toolCalls == null) return;
-
-        foreach (var tc in toolCalls)
-        {
-            if (tc?["id"]?.GetValue<string>() == toolCallId)
-            {
-                var fn = tc["function"];
-                var rawArgs = fn?["arguments"]?.GetValue<string>();
-                if (string.IsNullOrEmpty(rawArgs)) continue;
-
-                try
-                {
-                    var node = JsonNode.Parse(rawArgs);
-                    if (node is JsonObject obj)
-                    {
-                        bool modified = false;
-                        if (obj["content"] != null && obj["content"]!.GetValue<string>().Length > 500)
-                        {
-                            var filePath = obj["file_path"]?.GetValue<string>() ?? "file";
-                            obj["content"] = $"[Content written to disk ({Path.GetFileName(filePath)}). Ground truth remains on disk.]";
-                            modified = true;
-                        }
-
-                        if (modified)
-                        {
-                            fn!["arguments"] = obj.ToJsonString();
-                        }
-                    }
-                }
-                catch { }
-                break;
-            }
-        }
     }
 
     private void PostThinkingChunk(string chunk)
@@ -958,6 +904,28 @@ public sealed class NativeAgentEngine : IDisposable
                     {
                         type = "text_delta",
                         text = chunk
+                    }
+                }
+            }
+        });
+    }
+
+    private void PostToolArgsChunk(string chunk)
+    {
+        _postToUi(new
+        {
+            type = "qwenStream",
+            raw = "",
+            packet = new
+            {
+                type = "stream_event",
+                @event = new
+                {
+                    type = "content_block_delta",
+                    delta = new
+                    {
+                        type = "input_json_delta",
+                        partial_json = chunk
                     }
                 }
             }
